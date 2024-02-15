@@ -17,12 +17,21 @@ sentry_sdk.init(
 @app.route("/product" , methods=["POST","GET","PUT","PATCH","DELETE"] )
 def prods():
     if request.method == "GET":
+        
         try:
-            prods=Product.query.all()
-            res = []
-            for i in prods:
-              res.append({"id": i.id,"name":i.name,"price":i.price})
-            return jsonify(res),200
+            product_id = request.args.get('id')
+            if product_id:
+                product = Product.query.get(product_id)
+                if product:
+                    return jsonify({"id": product.id, "name": product.name, "price": product.price}), 200
+                else:
+                    return jsonify({"error": "Product not found"}), 404
+            else:
+             prods=Product.query.all()
+             res = []
+             for i in prods:
+               res.append({"id": i.id,"name":i.name,"price":i.price})
+             return jsonify(res),200
         except Exception as e:
             print(e)
             # capture_exception(e)
@@ -45,6 +54,9 @@ def prods():
             return jsonify("data is not json"),400
     else:
          return jsonify({"error" : "method not allowed"}),403
+    
+
+
         
 if  __name__ == "__main__":
    with app.app_context():
