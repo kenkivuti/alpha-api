@@ -15,7 +15,16 @@ class Product(db.Model):
     price = db.Column(db.Integer, nullable=False)
     # created_at = db.Column(db.Datetime, default=datetime.utcnow, nullable=False)
 
+    sales=db.relationship("Sale",back_populates='products')
 
+class Sale(db.Model):
+    __tablename__='sales'
+    id=db.Column(db.Integer,primary_key=True)
+    pid=db.Column(db.Integer,db.ForeignKey('product.id'),nullable=False)
+    quantity=db.Column(db.Integer,nullable=False)
+    created_at=db.Column(db.DateTime,default=datetime.utcnow ,nullable=False)
+
+    products=db.relationship("Product",back_populates='sales')
     
 
 
