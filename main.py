@@ -3,6 +3,7 @@ from flask import Flask , jsonify
 from sentry_sdk import capture_exception
 from dbservice import Product,app,db,request,Sale
 from flask_cors import CORS
+import requests
 
 
 # db.create_all()
@@ -44,6 +45,7 @@ def prods():
                     return jsonify(res),201
             except Exception as e:
                 print(e)
+                
                 return jsonify("error creating product"),505
         else:
             return jsonify("data is not json"),400
@@ -84,6 +86,24 @@ def sales():
                 return jsonify({"error": "Data is not JSON."}), 400
     else:
         return jsonify({"error": "Method not allowed."}), 400
+
+
+
+@app.route("/dashboard", methods=['POST','GET'])
+def dashboard():
+    api_key =  "LVVQU33XBR3NBE1U"
+    url = "https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=KES&apikey="+api_key
+    
+    data= requests.get(url).json()
+    
+
+    to_currency_code = data['Realtime Currency Exchange Rate']['3. To_Currency Code']
+    exchange_rate = data['Realtime Currency Exchange Rate']['5. Exchange Rate']
+    output = {to_currency_code: exchange_rate}
+    return output
+
+# display the currency in your web app.
+# consume any other public APIs
         
 
 
