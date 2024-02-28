@@ -1,9 +1,11 @@
 import sentry_sdk 
-from flask import Flask , jsonify
+from flask import Flask , jsonify 
 from sentry_sdk import capture_exception
 from dbservice import Product,app,db,request,Sale
 from flask_cors import CORS
 import requests
+from datetime import datetime, date 
+from sqlalchemy import func
 
 
 # db.create_all()
@@ -91,19 +93,35 @@ def sales():
 
 @app.route("/dashboard", methods=['POST','GET'])
 def dashboard():
-    api_key =  "LVVQU33XBR3NBE1U"
-    url = "https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=KES&apikey="+api_key
+    # api_key =  "LVVQU33XBR3NBE1U"
+    # url = "https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=KES&apikey="+api_key
     
-    data= requests.get(url).json()
+    # data= requests.get(url).json()
     
+# Query  get sales per day for line graph
+    sales_per_day = db.session.query(
+        func.date(Sale.created_at).label('date'),# extracts date from created at
+        func.sum(Sale.quantity *Product.price).label('total_sales')# calculate the total number of sales per day
+    ).join(Product).group_by(
+        func.date(Sale.created_at)
+    ).all()
+ 
+    #  to JSON format
+    sales_data = [{'date': str(day), 'total_sales': sales}
+                  for day, sales in sales_per_day]
+    # Query sales per product for bar graph
+    sales_per_product = db.session.query(
+        Product.name,
+        func.sum(Sale.quantity*Product.price).label('sales_product')
+    ).join(Sale).group_by(
+        Product.name
+    ).all()
 
-    to_currency_code = data['Realtime Currency Exchange Rate']['3. To_Currency Code']
-    exchange_rate = data['Realtime Currency Exchange Rate']['5. Exchange Rate']
-    output = {to_currency_code: exchange_rate}
-    return output
+     #  JSON format
+    salesproduct_data = [{'name': name, 'sales_product': sales_product}
+                         for name, sales_product in sales_per_product]
 
-# display the currency in your web app.
-# consume any other public APIs
+    return jsonify({'sales_data': sales_data, 'salesproduct_data': salesproduct_data})
         
 
 

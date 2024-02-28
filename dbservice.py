@@ -23,7 +23,6 @@ class Sale(db.Model):
     pid=db.Column(db.Integer,db.ForeignKey('product.id'),nullable=False)
     quantity=db.Column(db.Integer,nullable=False)
     created_at=db.Column(db.DateTime,default=datetime.utcnow ,nullable=False)
-
     products=db.relationship("Product",back_populates='sales')
     
 
