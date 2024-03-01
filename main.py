@@ -1,11 +1,16 @@
 import sentry_sdk 
-from flask import Flask , jsonify 
+from flask import Flask , jsonify ,flash ,render_template
 from sentry_sdk import capture_exception
-from dbservice import Product,app,db,request,Sale
+from dbservice import Product,app,db,request,Sale,User
 from flask_cors import CORS
-import requests
+import requests, datetime
 from datetime import datetime, date 
-from sqlalchemy import func
+from sqlalchemy import func 
+import jwt
+from functools import wraps
+
+
+
 
 
 # db.create_all()
@@ -19,9 +24,38 @@ sentry_sdk.init(
 
 CORS(app)
 
+def token_required(f):
+    @wraps(f)
+    def decorated(*args , **kwargs):
+        token = request.headers.get('Authorization')
+
+        if not token:
+            return jsonify({'message': 'Token is missing!'}), 401
+
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            current_user = data['username']
+        except:
+            return jsonify({'message': 'Token is invalid!'}), 401
+
+        return f(current_user, *args , **kwargs)
+
+    return decorated
+
+
+
+
+
+
+
+
+
+
+
 # get  all products and store product
 @app.route("/product" , methods=["POST","GET","PUT","PATCH","DELETE"] )
-def prods():
+@token_required
+def prods(current_user):
     if request.method == "GET":
         
         try:
@@ -123,6 +157,53 @@ def dashboard():
 
     return jsonify({'sales_data': sales_data, 'salesproduct_data': salesproduct_data})
         
+# route for register
+@app.route("/register", methods=['POST', 'GET'])
+def register():
+ 
+   try:   
+      data=request.json
+      u=data['username']
+      
+   except Exception as  e:
+      return jsonify({"result":"invalid request"}),200
+
+   if User.query.filter_by(username=u).first().username !=u:
+       new_user=User(username=u,password=data['password'])
+       db.session.add(new_user)
+       db.session.commit()
+       r=f'successfully stored: {str(new_user.id)}'
+       res={"result" : r}
+       return jsonify(res),201
+   else:
+        u=data['username']
+        return jsonify({"result" : f'username{u} already exists'}),400
+ 
+
+
+  
+
+@app.route("/login", methods=['POST'])
+def login():
+     try:
+      data=request.json
+      u =data['username']
+      p=data['password']
+     except:
+         return jsonify({"result" : "invalid request"}),400
+      
+     if User.query.filter_by(username=u,password=p).count() > 0:
+         token = jwt.encode({'username':u, 'exp': datetime.datetime.utcnow()
+                             + datetime.timedelta(minutes=30)}, app.config['SECRET_KEY'])
+        #  login user
+         return jsonify({"result" : "success", "Access_token" : "token"}),200
+     else:
+        #  incorrect credentials
+         return jsonify({"result" : "invalid credentials"}),403
+
+
+    
+
 
 
         

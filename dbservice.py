@@ -13,8 +13,7 @@ class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
     price = db.Column(db.Integer, nullable=False)
-    # created_at = db.Column(db.Datetime, default=datetime.utcnow, nullable=False)
-
+# relationship
     sales=db.relationship("Sale",back_populates='products')
 
 class Sale(db.Model):
@@ -23,7 +22,14 @@ class Sale(db.Model):
     pid=db.Column(db.Integer,db.ForeignKey('product.id'),nullable=False)
     quantity=db.Column(db.Integer,nullable=False)
     created_at=db.Column(db.DateTime,default=datetime.utcnow ,nullable=False)
+    # relationship
     products=db.relationship("Product",back_populates='sales')
     
+
+class User(db.Model):
+    __tablename__='users'
+    id = db.Column(db.Integer,primary_key=True)
+    username= db.Column(db.String(255),unique=True)
+    password=db.Column(db.String(255),nullable=False)
 
 
