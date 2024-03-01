@@ -3,8 +3,7 @@ from flask import Flask , jsonify ,flash ,render_template
 from sentry_sdk import capture_exception
 from dbservice import Product,app,db,request,Sale,User
 from flask_cors import CORS
-import requests, datetime
-from datetime import datetime, date 
+import requests, datetime 
 from sqlalchemy import func 
 import jwt
 from functools import wraps
@@ -26,26 +25,25 @@ CORS(app)
 
 def token_required(f):
     @wraps(f)
-    def decorated(*args , **kwargs):
+    def decorated(*args, **kwargs):
         token = request.headers.get('Authorization')
 
         if not token:
             return jsonify({'message': 'Token is missing!'}), 401
 
         try:
-            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            sk = str(app.config['SECRET_KEY'])
+            data = jwt.decode(token, sk, algorithms=["HS256"])
             current_user = data['username']
-        except:
-            return jsonify({'message': 'Token is invalid!'}), 401
+        except jwt.ExpiredSignatureError:
+            return jsonify({'message': 'Token has expired!'}), 401
 
-        return f(current_user, *args , **kwargs)
+        except jwt.InvalidTokenError:
+            return jsonify({'message': 'Invalid token!'}), 401
+
+        return f(current_user, *args, **kwargs)
 
     return decorated
-
-
-
-
-
 
 
 
@@ -161,24 +159,21 @@ def dashboard():
 @app.route("/register", methods=['POST', 'GET'])
 def register():
  
-   try:   
-      data=request.json
-      u=data['username']
+     
+    data=request.json
+    u=data['username']
       
-   except Exception as  e:
-      return jsonify({"result":"invalid request"}),200
 
-   if User.query.filter_by(username=u).first().username !=u:
-       new_user=User(username=u,password=data['password'])
-       db.session.add(new_user)
-       db.session.commit()
-       r=f'successfully stored: {str(new_user.id)}'
-       res={"result" : r}
-       return jsonify(res),201
-   else:
-        u=data['username']
+    if not User.query.filter_by(username=u).first():
+        new_user=User(username=u,password=data['password'])
+        db.session.add(new_user)
+        db.session.commit()
+        r=f'successfully stored: {str(new_user.id)}'
+        res={"result" : r}
+        return jsonify(res),201
+    else:
         return jsonify({"result" : f'username{u} already exists'}),400
- 
+    
 
 
   
@@ -192,11 +187,13 @@ def login():
      except:
          return jsonify({"result" : "invalid request"}),400
       
-     if User.query.filter_by(username=u,password=p).count() > 0:
-         token = jwt.encode({'username':u, 'exp': datetime.datetime.utcnow()
-                             + datetime.timedelta(minutes=30)}, app.config['SECRET_KEY'])
+     user= User.query.filter_by(username=u,password=p).first
+     if user:
+         secret_key = str(app.config['SECRET_KEY'])
+         token = jwt.encode({'username': u, 'exp': datetime.datetime.utcnow()
+                            + datetime.timedelta(minutes=30)}, secret_key)
         #  login user
-         return jsonify({"result" : "success", "Access_token" : "token"}),200
+         return jsonify({"result" : "success", "Access_token" : token}),200
      else:
         #  incorrect credentials
          return jsonify({"result" : "invalid credentials"}),403
