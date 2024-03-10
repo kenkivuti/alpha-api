@@ -15,6 +15,9 @@ class Product(db.Model):
     price = db.Column(db.Integer, nullable=False)
 # relationship
     sales=db.relationship("Sale",back_populates='products')
+    username=db.Column(db.String,db.ForeignKey('users.username'),nullable=False)
+    user=db.relationship("User", backref="products")
+    
 
 class Sale(db.Model):
     __tablename__='sales'
@@ -31,5 +34,8 @@ class User(db.Model):
     id = db.Column(db.Integer,primary_key=True)
     username= db.Column(db.String(255),unique=True)
     password=db.Column(db.String(255),nullable=False)
+
+    def __repr__(self):
+      return f"<User(name='{self.name}', email='{self.email}', password='{self.password}')>"
 
 

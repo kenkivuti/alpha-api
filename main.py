@@ -71,7 +71,13 @@ def prods(current_user):
         if request.is_json:
             try:  
                     data = request.json
-                    new_data = Product(name=data['name'], price= data['price'])
+
+                    username= current_user
+                    user =User.query.filter_by(username=username).first()
+                    if user:
+                        user_id=user.id
+
+                    new_data = Product(name=data['name'], price= data['price'],userid=user_id)
                     db.session.add(new_data)
                     db.session.commit()
                     r = "successfully stored product id %s" , {str(new_data.id)} 
@@ -85,6 +91,25 @@ def prods(current_user):
             return jsonify("data is not json"),400
     else:
          return jsonify({"error" : "method not allowed"}),403
+
+
+
+@app.route('/get-product<int:product_id>', methods=['GET'])
+def get_product(product_id):
+    try:
+        prd = Product.query.get(product_id)
+        if prd:
+            return jsonify({
+                "id": prd.id,
+                "name": prd.name,
+                "price": prd.price
+            })
+        else:
+            return jsonify({"error": "Product not found."}), 404
+    except Exception as e:
+        print(e)
+        # capture_exception(e)
+        return jsonify({"error": "Internal Server Error"}), 500
     
 
 
@@ -154,6 +179,8 @@ def dashboard():
                          for name, sales_product in sales_per_product]
 
     return jsonify({'sales_data': sales_data, 'salesproduct_data': salesproduct_data})
+
+    
         
 # route for register
 @app.route("/register", methods=['POST', 'GET'])
@@ -193,7 +220,7 @@ def login():
          token = jwt.encode({'username': u, 'exp': datetime.datetime.utcnow()
                             + datetime.timedelta(minutes=30)}, secret_key)
         #  login user
-         return jsonify({"result" : "success", "Access_token" : token}),200
+         return jsonify({"result" : "success", "access_token" : token}),200
      else:
         #  incorrect credentials
          return jsonify({"result" : "invalid credentials"}),403
